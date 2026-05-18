@@ -1,0 +1,103 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // 0. Global Safety Net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Phase 3: Primitive Definition
+    function isValidId(id) {
+      return id is string && id.size() > 0 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+    
+    function incoming() { return request.resource.data; }
+    function existing() { return resource.data; }
+    
+    // Auth helpers
+    function isSignedIn() { return request.auth != null; }
+
+    // Phase 2: Validation Blueprints (User)
+    function isValidUser(data) {
+      return data.keys().hasOnly(['name', 'level', 'interests', 'country', 'createdAt', 'updatedAt', 'readingLevel'])
+        && (!('name' in data) || (data.name is string && data.name.size() > 0 && data.name.size() <= 100))
+        && (!('level' in data) || (data.level is string && data.level.size() > 0 && data.level.size() <= 20))
+        && (!('readingLevel' in data) || (data.readingLevel is string && data.readingLevel.size() > 0 && data.readingLevel.size() <= 20))
+        && (!('interests' in data) || (data.interests is list && data.interests.size() <= 20)) // Assume each string is validated in client as we can't iterate
+        && (!('country' in data) || (data.country is string && data.country.size() > 0 && data.country.size() <= 10))
+        && (!('createdAt' in data) || data.createdAt is string)
+        && (!('updatedAt' in data) || data.updatedAt is string);
+    }
+
+    function isCreateUserAction(data) {
+      return data.keys().hasAll(['name', 'level', 'createdAt', 'updatedAt']);
+    }
+
+    // Phase 2: Validation Blueprints (Progress)
+    function isValidProgress(data) {
+      return data.keys().hasOnly(['userId', 'moduleId', 'vocabCompleted', 'storyProgress', 'quizScores', 'storyLogs', 'achievements', 'updatedAt'])
+        && (!('userId' in data) || (data.userId is string && data.userId == request.auth.uid))
+        && (!('moduleId' in data) || (data.moduleId is string && data.moduleId.size() > 0 && data.moduleId.size() <= 100))
+        && (!('vocabCompleted' in data) || data.vocabCompleted is bool)
+        && (!('storyProgress' in data) || data.storyProgress is number)
+        && (!('quizScores' in data) || (data.quizScores is list && data.quizScores.size() <= 100))
+        && (!('storyLogs' in data) || (data.storyLogs is list && data.storyLogs.size() <= 100))
+        && (!('achievements' in data) || (data.achievements is list && data.achievements.size() <= 100))
+        && (!('updatedAt' in data) || data.updatedAt is string);
+    }
+    
+    function isCreateProgressAction(data) {
+      return data.keys().hasAll(['userId', 'moduleId', 'vocabCompleted', 'storyProgress', 'quizScores', 'updatedAt']);
+    }
+
+    // Master Gate
+    
+    match /users/{userId} {
+      allow get: if isSignedIn() && request.auth.uid == userId && isValidId(userId);
+      allow list: if false; // Users cannot list other users
+      allow create: if isSignedIn() 
+        && request.auth.uid == userId 
+        && isValidId(userId)
+        && isValidUser(incoming())
+        && isCreateUserAction(incoming());
+      
+      allow update: if isSignedIn() 
+        && request.auth.uid == userId 
+        && isValidId(userId)
+        && isValidUser(incoming())
+        && incoming().diff(existing()).affectedKeys().hasOnly(['name', 'level', 'readingLevel', 'interests', 'country', 'updatedAt']);
+        
+      allow delete: if isSignedIn() && request.auth.uid == userId && isValidId(userId);
+    }
+
+    match /progress/{userId_moduleId} {
+      // Must match {userId}_{moduleId}
+      allow get: if isSignedIn() 
+        && isValidId(userId_moduleId)
+        && userId_moduleId.matches('^' + request.auth.uid + '_.*');
+        
+      // For list queries, must query where('userId', '==', request.auth.uid)
+      allow list: if isSignedIn()
+        && resource.data.userId == request.auth.uid;
+        
+      allow create: if isSignedIn() 
+        && isValidId(userId_moduleId)
+        && userId_moduleId.matches('^' + request.auth.uid + '_.*')
+        && isValidProgress(incoming())
+        && isCreateProgressAction(incoming());
+      
+      allow update: if isSignedIn() 
+        && isValidId(userId_moduleId)
+        && userId_moduleId.matches('^' + request.auth.uid + '_.*')
+        && isValidProgress(incoming())
+        && incoming().userId == existing().userId
+        && incoming().moduleId == existing().moduleId
+        && incoming().diff(existing()).affectedKeys().hasOnly(['vocabCompleted', 'storyProgress', 'quizScores', 'storyLogs', 'achievements', 'updatedAt']);
+        
+      allow delete: if isSignedIn() 
+        && isValidId(userId_moduleId)
+        && userId_moduleId.matches('^' + request.auth.uid + '_.*');
+    }
+  }
+}

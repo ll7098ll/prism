@@ -1,0 +1,165 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "A user of the interactive textbook. The level field represents the school level (elementary/middle/high).",
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "The user's chosen name."
+        },
+        "level": {
+          "type": "string",
+          "enum": ["elementary", "middle", "high"],
+          "description": "The user's school level. Maps to: elementary=초등학교, middle=중학교, high=고등학교."
+        },
+        "interests": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Topics the user is interested in."
+        },
+        "country": {
+          "type": "string",
+          "enum": ["kr", "us", "jp", "gb", "fr", "de", "it", "cn"],
+          "description": "The user's selected country for localization."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "When the user profile was created."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "When the user profile was last updated."
+        }
+      },
+      "required": ["name", "level", "createdAt", "updatedAt"]
+    },
+    "Subject": {
+      "title": "Subject",
+      "description": "A broad subject area like Social Studies, Science, or History. Subjects are defined per country and school level in mockData.ts, not stored in Firestore.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "enum": ["social-studies", "science", "history"],
+          "description": "Unique subject identifier, consistent across all countries and levels."
+        },
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "icon": { "type": "string", "description": "Lucide icon name." },
+        "colorTheme": { "type": "string" }
+      },
+      "required": ["id", "title", "description"]
+    },
+    "Module": {
+      "title": "Module",
+      "description": "A specific topic within a subject. 288 modules total: 8 countries × 3 school levels × 3 subjects × 4 modules. Defined in mockData.ts, not stored in Firestore.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique module ID using pattern: {country}-{level}-{subject}-{topic}. Example: kr-e-soc-village"
+        },
+        "subjectId": {
+          "type": "string",
+          "enum": ["social-studies", "science", "history"],
+          "description": "The parent subject this module belongs to."
+        },
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "achievements": {
+          "type": "array",
+          "items": { "$ref": "#/entities/Achievement" },
+          "description": "Achievements that can be unlocked by completing this module's stories."
+        }
+      },
+      "required": ["id", "subjectId", "title", "description", "achievements"]
+    },
+    "Achievement": {
+      "title": "Achievement",
+      "description": "An unlockable achievement tied to a module's story.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Unique achievement identifier." },
+        "name": { "type": "string", "description": "Display name of the achievement." },
+        "desc": { "type": "string", "description": "Description of how to unlock." },
+        "keyword": { "type": "string", "description": "Keyword that triggers this achievement when included in a story choice." },
+        "icon": { "type": "string", "description": "Lucide icon name." },
+        "color": { "type": "string", "description": "Tailwind text color class." },
+        "bg": { "type": "string", "description": "Tailwind background color class." }
+      },
+      "required": ["id", "name", "desc", "keyword", "icon", "color", "bg"]
+    },
+    "Progress": {
+      "title": "Progress",
+      "description": "The user's learning progress per module.",
+      "type": "object",
+      "properties": {
+        "vocabCompleted": {
+          "type": "boolean",
+          "description": "Whether the user has completed the vocabulary section."
+        },
+        "userId": {
+          "type": "string",
+          "description": "The user ID this progress belongs to."
+        },
+        "moduleId": {
+          "type": "string",
+          "description": "The module ID this progress belongs to."
+        },
+        "storyProgress": {
+          "type": "number",
+          "description": "The number of story turns completed."
+        },
+        "quizScores": {
+          "type": "array",
+          "items": { "type": "number" },
+          "description": "Scores from completed quizzes."
+        },
+        "storyLogs": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "date": { "type": "string", "format": "date-time" },
+              "type": { "type": "string", "enum": ["start", "choice"] },
+              "choice": { "type": "string" },
+              "consequence": { "type": "string" },
+              "learningPoint": { "type": "string" }
+            }
+          },
+          "description": "Logs of story choices and their outcomes."
+        },
+        "achievements": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "IDs of achievements unlocked for this module."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "When the progress was last updated."
+        }
+      },
+      "required": ["userId", "moduleId", "vocabCompleted", "storyProgress", "quizScores", "updatedAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/User" },
+      "description": "Stores user profiles. The 'level' field now stores school level keys: 'elementary', 'middle', or 'high'."
+    },
+    "/progress/{userId_moduleId}": {
+      "schema": { "$ref": "#/entities/Progress" },
+      "description": "Stores user learning progress per module. ID format: {userId}_{moduleId}."
+    }
+  },
+  "notes": {
+    "curriculum_data": "Subjects and Modules are NOT stored in Firestore. They are defined in mockData.ts as static data, organized by country → schoolLevel → subjects → modules.",
+    "schema_migration": "The 'level' field in /users/{userId} changed from locale-specific strings (초급/Beginner/初級...) to internal keys (elementary/middle/high). Existing users with old values will default to 'middle' in the theme system.",
+    "total_modules": "8 countries × 3 school levels × 3 subjects × 4 modules = 288 total modules."
+  }
+}
