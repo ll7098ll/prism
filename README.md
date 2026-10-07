@@ -87,6 +87,7 @@ PRISM의 전체 시스템 및 비즈니스 로직을 체계적으로 파악하�
 | **Test** | [07. 검증 및 품질](./docs/07_TEST_VERIFICATION.md) | 테스트 케이스, 통합 테스트 전략 및 트러블슈팅 |
 | **Summary** | [08. 성과 보고서](./docs/08_FINAL_PROJECT_REPORT.md) | 프로젝트 총평, 달성 목표 추적 및 향후 계획 |
 | **Guide** | [API 레퍼런스](./docs/API_REFERENCE.md) <br/> [사용자 매뉴얼](./docs/USER_MANUAL.md) | 코드 레벨 분석 및 실사용자 관점의 가이드 문서 |
+| **Dev Log** | [개발 일지 색인](./docs/DEVELOPMENT_LOG.md) | 스프린트별 상세 개발 일지 및 마일스톤 아카이브 |
 
 ---
 

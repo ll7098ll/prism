@@ -1,69 +1,94 @@
 <div align="center">
-  <img src="https://img.shields.io/badge/REQUIREMENTS-ANALYSIS-success?style=for-the-badge" alt="Requirements" />
-  <h1>📋 02. 요구사항 분석서 (Requirement Analysis)</h1>
-  <p><b>PRISM 시스템 기능, 비기능, 보안 및 성능 요구사항 상세 정의</b></p>
+  <img src="https://img.shields.io/badge/REQUIREMENTS-ANALYSIS%20COMPLETE-success?style=for-the-badge" alt="Requirements" />
+  <h1>📋 02. 요구사항 분석서 (SRS)</h1>
+  <p><b>PRISM 시스템 기능적 / 비기능적 요구사항 및 제약사항 상세 명세</b></p>
 </div>
 
 <br/>
 
 > [!IMPORTANT]  
-> 본 분석서는 'PRISM — AI 기반 인터랙티브 교과서'의 성공적 론칭을 위한 소프트웨어 요구사항 명세(SRS)입니다. 상세 기능뿐 아니라 인프라 및 AI 검증 프로세스를 포괄합니다.
+> 본 문서는 **PRISM — AI 기반 인터랙티브 교과서**의 설계, 구현 및 품질 검증의 기준이 되는 소프트웨어 요구사항 명세서(Software Requirements Specification)입니다.
 
 ---
 
 ## ⚙️ 1. 기능 요구사항 (Functional Requirements)
 
-### 🌍 F1. 글로벌 교과 과정 (Scale & Expansion)
-- **🌍 다국어 지원 (i18n)**: 핵심 UI 및 커리큘럼은 8개국(한국, 미국, 일본, 영국, 프랑스, 독일, 이탈리아, 중국) 언어로 지원되어야 한다.
-- **📚 방대한 모듈화**: 총 **288개 모듈** (8개 국가 × 3개 학교급 × 3과목 × 4개 단위 단원) 규격의 학습 경로가 구조화(JSON 등)되어 있어야 한다.
-- **🔄 무결점 진입 포인트**: 사용자는 과목 카드를 선택하고 즉시 해당 과목의 단원(모듈) 리스트를 확인할 수 있어야 한다.
+### 🌍 F1. 글로벌 표준 교육과정 및 모듈 지원
+* **F1.1 (8개국 로컬라이제이션)**: 대한민국(KR), 미국(US), 일본(JP), 중국(CN), 영국(GB), 프랑스(FR), 이탈리아(IT), 독일(DE)의 8대 국가 교육과정을 지원해야 한다.
+* **F1.2 (288개 표준 모듈 지식 베이스)**: 각 국가별 3개 학교급(초등/중등/고등) × 3개 교과(사회/과학/역사) × 4개 핵심 단원 = 총 288개 독립 학습 모듈을 제공해야 한다.
+* **F1.3 (동적 언어 전환)**: 언어 변경 시 UI 텍스트뿐만 아니라 단원명, 시나리오 생성 프롬프트, 퀴즈 및 피드백이 해당 국가 언어/문화권으로 즉시 동기화되어야 한다.
 
-### 👤 F2. 사용자 프로필 및 개인화(Onboarding)
-- **🛠 프로필 셋업**: 로그인 직후 사용자는 닉네임, 학교급(`Elementary`, `Middle`, `High`), 열독 수준, 그리고 **관심사 표상(키워드 직접 입력)**을 설정해야 한다.
-- **🎨 Dynamic UI Context**: 학교급 선택(초/중/고)에 따라 앱의 색상 톤, 글꼴 크기, AI의 응답 어투(Tone & Manner)가 즉각적으로 변경 동기화되어야 한다.
-- **🔐 안전한 인증**: Firebase Auth 인프라를 활용하여 Google Auth 소셜 로그인을 제공해야 한다. (추후 Apple 뷰, 이메일로 확장 가능성)
+![글로벌 커리큘럼 화면](./assets/screenshots/12_global_curriculum_view.png)
 
-### 🧠 F3. 인터랙티브 스토리 엔진 & 멀티모달(AI Generation)
-- **💬 동적 대화 생성**: AI 프롬프트 스크립트는 학생의 프로필(관심사/레벨) 및 학습 단원의 핵심 개념이 주입되어 적절한 학습 시나리오를 JSON 형태로 반환해야 한다.
-- **🔀 분기형 선택 체계**: 스토리가 전개될 때마다 최소 2~3개의 선택지(Choice)가 제공되어야 하고, 선택 결과에 따라 스토리가 갈라지는 비선형(Non-linear) 전개 기능을 지원해야 한다.
-- **🖼 실시간 시각화**: 현재 장면의 맥락(Context)을 요약한 이미지 생성 프롬프트를 바탕으로 AI(Gemini 2.5 Flash Image)가 16:9 비율의 배경 이미지를 생성하여 화면에 렌더링해야 한다.
-- **📖 어휘 학습장 (Vocabulary)**: 모듈 진입 시, 해당 단원의 핵심 어휘를 AI가 미리 추출하여 단어장 뷰를 제공해야 한다.
+---
 
-### 🏆 F4. 게이미피케이션 및 성취 시스템 (Gamification)
-- **🌟 랭킹 및 티어**: 학습 이수율 및 퀴즈 득점률 총합을 기반으로 5대 등급(`Bronze`, `Silver`, `Gold`, `Platinum`, `Diamond`)을 부여한다.
-- **🏅 배지 (Badge) 수집**: 단원 완주, 특정 희귀 분기 도달, 모두 정답을 맞춘 경우 특별 배지를 언락 및 프로필에 장착 가능해야 한다.
-- **📈 대시보드 시각화**: 사용자가 지금까지 달성한 학습 진행도, 차트, 과목별 점수 분포를 직관적인 차트(Recharts 활용 등)로 표시해야 한다.
+### 👤 F2. 학습자 프로필 및 인지 수준 온보딩
+* **F2.1 (Google 소셜 인증)**: Firebase Authentication 기반 Google 원클릭 로그인을 지원하며 세션 상태를 영속 관리해야 한다.
+* **F2.2 (3단계 학교급 선택)**: 학습자는 초등학교(`elementary`), 중학교(`middle`), 고등학교(`high`)를 선택할 수 있어야 하며, 학교급에 따라 시스템 테마와 AI 생성 난이도가 즉시 재구성되어야 한다.
+* **F2.3 (관심사 메타데이터 태깅)**: 최대 3개의 자유 관심사(예: `우주 과학`, `민주주의`, `AI 로봇`)를 입력받아 AI 시나리오의 주인공 설정 및 분기 선택지의 소재로 주입해야 한다.
+* **F2.4 (프로필 지속성 & 상시 수정)**: 메인 화면 헤더의 프로필 버튼을 통해 언제든 정보를 변경할 수 있어야 하며, 기존 퀴즈 기록이나 업적은 유실 없이 보존되어야 한다.
+
+![프로필 설정 화면](./assets/screenshots/02_profile_setup_view.png)
+
+---
+
+### 🧠 F3. 3단계 인터랙티브 학습 파이프라인
+* **F3.1 (어휘 학습 - Vocabulary)**: 단원의 핵심 개념어 5개를 추출하여 앞면(용어)과 뒷면(정의 및 교과 예문)을 제공하는 3D 플립 플래시카드 인터랙션을 제공해야 한다.
+* **F3.2 (비주얼 노벨 스토리 모드 - Story Mode)**:
+  * Gemini 3.1 Flash 모델을 통해 학습자 수준에 부합하는 서사를 실시간 생성해야 한다.
+  * 장면마다 16:9 비율의 맥락 맞춤형 배경 이미지를 렌더링해야 한다.
+  * 학습자의 관심사 키워드가 태그로 반영된 최소 3개의 분기 선택지를 제공해야 한다.
+  * 선택 즉시 상단에 **인과관계 피드백 배너(Consequence Banner)**를 띄워 사회적 결과와 교과 개념(`Learning Point`)을 안내해야 한다.
+* **F3.3 (심화 평가 - Evaluation)**: 객관식, 상황 기반 사례 연구(Case Study), 주관식 단답형 문항을 복합 제공하고, 채점 결과와 상세 해설을 즉시 피드백해야 한다.
+
+| 어휘 플래시카드 (F3.1) | 비주얼 노벨 스토리 (F3.2) | 심화 평가 퀴즈 (F3.3) |
+| :---: | :---: | :---: |
+| ![어휘 학습](./assets/screenshots/06_vocabulary_view.png) | ![스토리 모드](./assets/screenshots/07_story_mode_view.png) | ![심화 평가](./assets/screenshots/08_evaluation_view.png) |
+
+---
+
+### 🏆 F4. 게이미피케이션 및 학습 이력 관리
+* **F4.1 (실시간 등급 티어)**: 어휘 완료(20점), 스토리 분기 진행(최대 40점), 퀴즈 최고 점수(최대 40점)를 합산(100점 만점)하여 `Bronze` ~ `Diamond` 등급을 부여해야 한다.
+* **F4.2 (업적 갤러리 및 칭호)**: 교과별·행동별 특수 업적 배지를 획득할 수 있으며, 획득한 대표 칭호를 사용자 이름 옆에 장착해야 한다.
+* **F4.3 (나의 스토리 발자취)**: 대시보드 하단에 사용자가 과거에 내린 모든 선택과 결과(Consequence)를 시간 순으로 복기할 수 있는 타임라인 카드를 렌더링해야 한다.
+
+![업적 갤러리 화면](./assets/screenshots/09_achievements_view.png)
 
 ---
 
 ## 🛡 2. 비기능 요구사항 (Non-functional Requirements)
 
-### 🎨 N1. 사용자 경험 및 접근성 (UX/UI & A11y)
-- 🎮 학습 도구의 거부감을 없애기 위해 프리미엄 애니메이션 UI(`Magic UI`, `Framer Motion`, 카입 티핑 효과 등)를 대폭 적용한다.
-- 📱 다양한 디바이스(PC, 태블릿, 모바일)에 깨짐이 없도록 반응형 레이아웃(Tailwind 기반 Mobile-first)을 완벽히 지원한다.
-- ♿ 색각 이상자를 고려하여 적절한 명도 대비와 텍스트 대체 수단을 구비한다.
+### 🎨 N1. 사용자 경험 및 시각 인터페이스 (UX/UI)
+* **N1.1 (Magic UI 및 마이크로 인터랙션)**: `RetroGrid`, `Particles`, `BorderBeam`, `ShimmerButton`, `TypingAnimation`을 유기적으로 결합하여 상호작용의 몰입감을 극대화한다.
+* **N1.2 (수준별 가변 테마 엔진)**:
+  * 초등: Amber 계열 파스텔톤, `rounded-3xl`의 둥근 곡률, 친근한 고딕.
+  * 중등: Blue 계열 청량한 모던톤, `rounded-2xl`, 정갈한 산세리프.
+  * 고등: Stone/Slate 계열 클래식 모노크롬, `rounded-lg`, 학술적 타이포그래피.
 
-### 🚀 N2. 성능 및 유연성 (Performance)
-- ⏱️ **지연 내결함성(Latency Tolerance)**: AI 텍스트 생성 또는 이미지 렌더링 중 통신 딜레이(지연) 발생 구간에서 **스켈레톤 UI(Shimmer 효과)** 또는 진행률 애니메이션 텍스트를 제공하여 체감 로딩을 완화한다.
-- 📦 **데이터 의존도 탈피**: 과목 확장 시 클라이언트 코드를 일일이 수정하지 않고, `curriculums` 폴더 내 JSON 주입 및 앱 재빌드만으로 즉시 반영되는 추상화 아키텍처를 따른다.
+### 🚀 N2. 성능 및 반응 속도 (Performance & Scalability)
+* **N2.1 (비동기 체감 지연 최소화)**: AI 시나리오 및 이미지 생성 대기 시간 동안 Skeleton UI 및 애니메이션 로더를 노출하여 사용자의 이탈을 방지한다.
+* **N2.2 (모듈 아키텍처 확장성)**: 신규 교과목이나 국가 교육과정 추가 시 기존 비즈니스 로직 수정 없이 데이터 JSON 주입만으로 확장이 가능한 순수 데이터 주도형 설계를 유지한다.
 
-### 🔐 N3. 데이터 정합성 / 보안 (Security)
-- 🔒 **Cloud Firestore Security Rules**: 2계층 방어 체계 반영. `request.auth.uid`와 문서 내 ID가 일치해야만 수정 권한(Update/Delete/Create)을 부여한다. "Dirty Dozen" 위협 모델 방어.
-- 🛑 **AI 프롬프트 인젝션(Injection) 차단**: AI 입력 시, 사용자가 직접 입력한 관심사 키워드가 시스템 지시문(System Instructions)을 무너뜨리지 않도록 이스케이프 및 구조적 격리를 수행한다.
-- ⚙️ **데이터 파싱 안정성**: AI의 JSON 응답이 불완전할 때(Malformed JSON), 에러를 포착하고 안전한 모드 통보 및 재시도(Retry)를 수행해야 한다.
+### 🔐 N3. 데이터 무결성 및 보안 (Security & Integrity)
+* **N3.1 (Firestore Security Rules)**: 인증된 본인의 고유 UID에만 읽기/쓰기 권한을 부여하여 타인의 학습 데이터 침해를 원천 차단한다.
+* **N3.2 (엄격한 JSON Schema 파싱)**: Gemini API 통신 시 사전에 정의된 JSON 포맷을 강제하며, 파싱 에러 발생 시 자동 복구 및 폴백 메커니즘을 가동한다.
 
 ---
 
-## 🔬 3. 하이브리드 검증 요구사항 (Validation & QA)
+## 📊 3. 요구사항 추적 매트릭스 (Requirements Traceability Matrix)
 
-| 🧪 검증 단계 | 🛠 방법론 | 📝 상세 내용 |
-| :--- | :--- | :--- |
-| **Hallucination Check** | 키워드 의무 매칭 | AI가 반환한 교육용 스크립트 결괏값에 단원 필수 학습 키워드(예: '수요와 공급', '삼권분립') 누락 시 Warning Alert 처리. |
-| **Persona Testing** | 시나리오 다변화 | '초등학생 + 우주과학 관심 + 다국어' 등 이질적 속성 조합 매핑 시, UI가 깨지거나 AI가 오류를 범하는지 크로스 체크(QA). |
-| **Image Policy Filter** | 안전 검사 | 유혈, 폭력 등 부적절한 AI 이미지 생성 방지를 위한 Safety Attributes 파라미터 적용 필수. |
+| 요구사항 ID | 기능 명칭 | 구현 컴포넌트 / 훅 | 검증 방식 | 상태 |
+| :---: | :--- | :--- | :--- | :---: |
+| **F1.1 ~ F1.3** | 글로벌 8개국 다국어 커리큘럼 | `AppContext`, `i18n.ts`, `mockData.ts` | 8개 언어 스위칭 무결성 테스트 | ✅ 완료 |
+| **F2.1 ~ F2.4** | 프로필 온보딩 & 학교급 동기화 | `ProfileSetup.tsx`, `useProfile.ts` | 학교급 변경 시 테마 및 DB 동기화 검증 | ✅ 완료 |
+| **F3.1** | 어휘 플래시카드 | `Vocabulary.tsx`, `PromptFactory.ts` | 카드 플립 3D 인터랙션 및 점수 누적 | ✅ 완료 |
+| **F3.2** | 비주얼 노벨 스토리 모드 | `StoryModeView.tsx`, `useStoryMode.ts` | 관심사 태그 분기 및 Consequence 배너 | ✅ 완료 |
+| **F3.3** | 심화 평가 퀴즈 | `EvaluationView.tsx`, `EvaluationContainer.tsx` | 다유형 문항 채점 및 해설 피드백 | ✅ 완료 |
+| **F4.1 ~ F4.3** | 랭크 티어, 업적, 발자취 | `DashboardView.tsx`, `Achievements.tsx` | 점수 합산 랭크 변동 및 타임라인 복기 | ✅ 완료 |
+| **N1.1 ~ N1.2** | 수준별 가변 테마 & Magic UI | `theme.ts`, `RetroGrid`, `ShimmerButton` | 초/중/고 테마 렌더링 캡처 검증 | ✅ 완료 |
 
 ---
 
 <div align="right">
-  <b><a href="./01_PROJECT_PROPOSAL.md">← 이전: 01. 프로젝트 기획서</a> &nbsp;|&nbsp; <a href="./03_SYSTEM_ARCHITECTURE.md">다음: 03. 아키텍처 설계 →</a></b>
+  <b><a href="./01_PROJECT_PROPOSAL.md">← 이전: 01. 프로젝트 기획서</a> &nbsp;|&nbsp; <a href="./03_SYSTEM_ARCHITECTURE.md">다음: 03. 아키텍처 설계 (Next) →</a></b>
 </div>

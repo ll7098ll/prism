@@ -1,106 +1,149 @@
-<div align="center">
-  <img src="https://img.shields.io/badge/API-REFERENCE_GUIDE-blue?style=for-the-badge" alt="API Reference" />
-  <h1>📑 PRISM: API Reference & Architecture</h1>
-  <p><b>'PRISM — AI 기반 인터랙티브 교과서'의 핵심 API, 훅 설계 및 데이터 도메인 명세서</b></p>
-</div>
+# 📑 PRISM: 시스템 API & 개발자 레퍼런스 (API Reference)
 
-<br/>
+> **PRISM (Personalized Reading & Interactive Semantic Module)**  
+> 프론트엔드 컴포넌트, 에이전틱 커스텀 훅, 컨텍스트 프로바이더, AI 및 Firebase SDK 인터페이스 명세서
 
 ---
 
-## 🏗️ 1. 시스템 아키텍처 및 훅 의존성 (Hook Dependency Graph)
+## 🏗️ 1. 훅 의존성 구조도 (Hook Dependency Graph)
 
 ```mermaid
 graph TD
-    classDef hook fill:#f3e5f5,stroke:#4a148c,stroke-width:2px,color:#000;
-    classDef context fill:#e0f7fa,stroke:#006064,stroke-width:2px,color:#000;
-    classDef comp fill:#fff3e0,stroke:#e65100,stroke-width:2px,color:#000;
+    classDef comp fill:#e3f2fd,stroke:#1565c0,stroke-width:2px;
+    classDef hook fill:#f3e5f5,stroke:#6a1b9a,stroke-width:2px;
+    classDef ctx fill:#e8f5e9,stroke:#2e7d32,stroke-width:2px;
+    classDef ext fill:#fff3e0,stroke:#e65100,stroke-width:2px;
 
-    UI[UI Components]:::comp --> HookA[useStoryMode]:::hook
-    UI --> HookB[useProgress]:::hook
-    UI --> HookC[useProfile]:::hook
-    UI --> HookD[useAuth]:::hook
+    UI[UI Components]:::comp --> HookStory[useStoryMode]:::hook
+    UI --> HookProg[useProgress]:::hook
+    UI --> HookProf[useProfile]:::hook
+    UI --> HookAuth[useAuth]:::hook
     
-    HookA --> HookState["AppContext (Context API)"]:::context
-    HookB --> HookState
-    HookC --> HookState
-    HookD --> HookState
+    HookStory --> Context[AppContext]:::ctx
+    HookProg --> Firebase[Firebase Firestore]:::ext
+    HookProf --> Firebase
+    HookAuth --> FirebaseAuth[Firebase Auth]:::ext
+    HookStory --> Gemini[Google Gemini SDK]:::ext
 ```
 
 ---
 
-## 🌍 2. 전역 상태 및 컨텍스트 (Context API)
+## 📦 2. 전역 상태 및 컨텍스트 (Context API)
 
-### 2.1. `AppContext` (`src/contexts/AppContext.tsx`)
-애플리케이션 전반의 국가별 설정 및 다국어 지원(i18n) 데이터를 관리하는 프로바이더입니다.
+### 2.1 `AppContext` (`src/contexts/AppContext.tsx`)
 
-**Properties (상태 필드):**
-- 🏳️ `selectedCountry`: 현재 선택된 국가 코드 (String, `kr`\|`us`\|`jp`\|`cn`\|`gb`\|`fr`\|`it`\|`de`).
-- 🗣️ `t(key)`: 다국어 번역 프록시 함수. `t('common.start')` 형식으로 중첩된 JSON 딕셔너리 접근 가능.
-- 📚 `curriculum`: 현재 국가 로케일에 최적화된 동적 커리큘럼 트리(과목/단원) 객체.
-- 🏫 `selectedSchoolLevel`: 학생의 발달 단계 (`elementary`\|`middle`\|`high`).
-
----
-
-## ⚙️ 3. 인터랙티브 엔진 훅스 (Interactive Hooks)
-
-### 3.1. `useStoryMode(moduleId)`
-가장 무거운 역할을 수행하는 메인 훅입니다. 스토리 턴과 AI 생성 라이프사이클을 조율합니다.
-
-**Return Values:**
-- 📜 `storyText`: AI가 생성한 현재 장면의 이야기 텍스트 (Markdown 가능).
-- 🔀 `choices`: 다음 전개를 결정짓기 위한 선택지 문자열 배열. 유저 관심사가 결합된 특수 선택지가 포함될 수 있음.
-- 📌 `consequence`: 유저의 직전 선택에 대해 AI가 내놓은 인과관계 분석 코멘트.
-- 🖼️ `image`: Gemini 2.5 Image가 렌더링한 16:9 뷰포트 배경 에셋 (Base64 URL).
-- 🚀 `handleChoice(choiceText: string) => Promise<void>`: 사용자의 선택을 AI 프롬프트 체인에 던지고, 응답을 디코딩하여 다음 장면 렌더를 트리거하는 클로저.
-
-### 3.2. `useProgress()`
-학습자의 학습 이력 저장, 업적 체크, 파이어베이스 동기화를 전담합니다.
-
-**Return Values:**
-- 📖 `storyLogs`: 전체 학습 여정의 타임라인 로그 배열 (`[{ choice, consequence, timestamp }]`).
-- 🏅 `achievements`: 현재까지 획득 완료한 배지의 ID 배열.
-- 👑 `rank`: 누적 퀴즈 점수 및 진척도를 기반으로 환산된 실시간 티어 문자열 (`Bronze` ~ `Diamond`).
-- 🔓 `unlockAchievement(id: string)`: 조건 충족이 감지될 때 서버로 배지 소유권을 청구(UpdateDoc)하는 뮤테이션 함수.
+| 속성명 (Property) | 타입 (Type) | 상세 설명 (Description) |
+| :--- | :--- | :--- |
+| `selectedCountry` | `string` | 현재 활성화된 국가 코드 (`kr`, `us`, `jp`, `cn`, `gb`, `fr`, `it`, `de`). |
+| `setSelectedCountry` | `(country: string) => void` | 활성 국가 코드를 변경하고 로컬스토리지에 영구 저장하는 함수. |
+| `selectedSchoolLevel` | `'elementary' \| 'middle' \| 'high'` | 학습자의 학교급 상태. |
+| `setSelectedSchoolLevel` | `(level: SchoolLevel) => void` | 학교급을 변경하고 테마 및 모듈 트리를 갱신하는 함수. |
+| `t` | `any` | 현재 국가/언어에 매핑된 실시간 다국어 번역 프록시 객체. |
+| `currentCountry` | `CountryInfo` | 현재 국가의 국기 이모지, 명칭, 통화 단위 메타데이터. |
+| `curriculum` | `CountryCurriculum` | 선택된 국가 및 학교급에 최적화된 정규 교육과정 지식 베이스. |
+| `MODULES` | `Record<string, Module[]>` | 현재 학제에 매핑된 전체 모듈 목록. |
 
 ---
 
-## 🗄️ 4. 데이터 도메인 명세 (TypeScript Interfaces)
+## 🪝 3. 에이전틱 커스텀 훅스 (Custom Hooks)
 
-### 4.1. 사용자 프로필 (`UserProfileInterface`)
-```typescript
-interface UserProfileInterface {
-  name: string;        // 닉네임
-  level: 'elementary' | 'middle' | 'high'; // 연령대 기반 학교급
-  interests: string[]; // 다중 관심사 태그 (최대 20자 제한)
-  country: string;     // 접속 국가/서버 로케일 코드
-  createdAt: string;   // 가입 시점 ISO 문자열
-}
-```
+### 3.1 `useStoryMode(moduleId: string | undefined)`
+비주얼 노벨 서사 생성, 의사결정 분기, Consequence 배너 피드백을 총괄하는 핵심 엔진입니다.
 
-### 4.2. 스토리 진행 로그 (`StoryLogInterface`)
 ```typescript
-interface StoryLogInterface {
-  choice: string;       // 사용자가 화면에서 클릭한 선택지 텍스트
-  consequence: string;  // 해당 선택이 불러온 파급 효과(AI 분석)
-  learningPoint: string;// 세계관 속 교육적 배움/개념
-  timestamp: string;    // 액션 타임스탬프 (ISO)
+interface StoryModeHookReturn {
+  profile: any;                       // 학습자 프로필 객체
+  loading: boolean;                   // 초기 데이터 로딩 여부
+  generating: boolean;                // AI 시나리오/이미지 생성 진행 중 여부
+  consequence: { narrative: string; learningPoint: string }; // 직전 선택에 따른 인과관계
+  storyText: string;                  // 현재 장면의 본문 서사
+  imageUrl: string | null;            // 16:9 배경 일러스트 URL
+  choices: Array<{ text: string; tailoredInterest?: string; learningOutcome?: string }>; // 분기 선택지
+  isEnding: boolean;                  // 멀티 엔딩 에필로그 진입 여부
+  endingSummary: string;              // 여정 종합 평가
+  handleChoice: (choiceText: string) => Promise<void>; // 사용자 선택 처리 핸들러
 }
 ```
 
 ---
 
-## 🤖 5. AI 인텔리전스 브릿지 (`src/lib/gemini.ts`)
+### 3.2 `useProgress(uid: string | undefined, moduleId: string | undefined)`
+Firestore `progress/{uid}_{moduleId}` 문서와 양방향 실시간 동기화를 수행합니다.
 
-- 🧠 **`generateStoryContent(prompt)`**: 
-    - **Schema Bound**: 응답 포맷이 흐트러지지 않도록 System Instruction에 JSON Schema(키: `consequence`, `text`, `choices`, `isEnding`)를 강제 마운트함.
-    - **Hyperparameter**: `Temperature: 0.7` (학습 목적에 부합하는 일관성을 지키면서도 판타지적 창의력을 발휘할 수 있는 황금비율).
-- 🖼️ **`generateImage(prompt)`**:
-    - **Model Core**: `gemini-2.5-flash-image`
-    - **Config**: 뷰포트 종횡비 `aspectRatio: '16:9'`, 브라우저 렌더링 최적화를 위한 `outputMimeType: 'image/jpeg'`.
+```typescript
+interface ProgressHookReturn {
+  progress: {
+    vocabCompleted: boolean;         // 어휘 학습 완료 여부
+    storyProgress: number;           // 진행한 스토리 분기 턴 수
+    quizScores: number[];            // 퀴즈 응시 점수 배열
+    achievements: string[];          // 달성한 특수 배지 ID 배열
+    storyLogs: StoryLog[];           // 의사결정 타임라인 로그 배열
+    updatedAt: string;
+  } | null;
+  loading: boolean;
+}
+```
+
+---
+
+### 3.3 `useProfile(uid: string | undefined)`
+학습자 개인 메타데이터를 관리합니다.
+
+```typescript
+interface ProfileHookReturn {
+  profile: {
+    name: string;                    // 학습자 닉네임
+    level: 'elementary' | 'middle' | 'high';
+    readingLevel: 'basic' | 'standard' | 'advanced';
+    interests: string[];             // 관심사 태그 목록 (최대 3개)
+    country: string;
+  } | null;
+  loading: boolean;
+  updateProfile: (data: Partial<UserProfile>) => Promise<void>;
+}
+```
+
+---
+
+## 🏭 4. 도메인 팩토리 & AI 서비스 (AI Services)
+
+### 4.1 `PromptFactory` (`src/lib/factories/PromptFactory.ts`)
+
+| 정적 메서드 (Static Method) | 매개변수 (Params) | 설명 (Description) |
+| :--- | :--- | :--- |
+| `createStoryStartPrompt` | `StoryPromptParams` | 단원의 1회차 도입부 시나리오 및 관심사 맞춤 선택지를 요청하는 시스템 프롬프트 생성. |
+| `createStoryTurnPrompt` | `StoryPromptParams` | 직전 선택(`choiceText`)과 누적 히스토리를 반영하여 인과관계와 다음 분기를 요청하는 프롬프트 생성. |
+| `getLevelGuidance` | `level, readingLevel` | 초/중/고별 문장 길이, 어휘 난이도, 어조(해요체/하십시오체) 메타 규칙을 문자열로 반환. |
+
+---
+
+### 4.2 `gemini.ts` (`src/lib/gemini.ts`)
+
+```typescript
+// Gemini 3.1 Flash를 통한 JSON 서사 생성
+export async function generateStoryContent(prompt: string): Promise<string>;
+
+// Gemini 2.5 Flash Image를 통한 16:9 맥락 배경 일러스트 렌더링
+export async function generateImage(prompt: string): Promise<string | null>;
+```
+
+---
+
+## 🎨 5. 디자인 시스템 테마 유틸리티 (`src/lib/theme.ts`)
+
+```typescript
+export function getLightTheme(level: string): {
+  card: string;       // Tailwind 클래스 (배경 및 경계선)
+  radius: string;     // 모서리 곡률 (rounded-3xl | rounded-2xl | rounded-lg)
+  font: string;       // 타이포그래피 (font-sans | font-serif)
+  accent: string;     // 강조 색상 클래스
+  badge: string;      // 배지 뱃지 배경/텍스트 클래스
+};
+```
 
 ---
 
 <div align="center">
-  <b><a href="../README.md">🏠 README 메인으로 가기</a></b>
+  <b>PRISM — Personalized Reading & Interactive Semantic Module</b><br/>
+  <i>API Reference v2.0 • 2026 PRISM Engineering Team</i>
 </div>

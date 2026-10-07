@@ -1,74 +1,157 @@
 <div align="center">
-  <img src="https://img.shields.io/badge/IMPLEMENTATION-CODE_LOG-teal?style=for-the-badge" alt="Implementation" />
-  <h1>🔧 06. 구현 상세 및 아키텍처 실무 (Implementation Details)</h1>
-  <p><b>핵심 모듈의 기술적 상세 전략, 렌더링 최적화, 프롬프트 엔지니어링 마일스톤</b></p>
+  <img src="https://img.shields.io/badge/IMPLEMENTATION-CODE%20LOG-teal?style=for-the-badge" alt="Implementation" />
+  <h1>🔧 06. 구현 상세 및 아키텍처 실무</h1>
+  <p><b>핵심 모듈의 기술적 상세, 실제 코드 스니펫 및 개발 마일스톤</b></p>
 </div>
 
 <br/>
 
 > [!NOTE]  
-> 본 문서는 단순 개념 설계를 넘어 실제 'PRISM' 프로젝트 소스 코드로 인스턴스화된 핵심 모듈들의 특수성 및 실무적인 엔지니어링 과정을 기술적으로 증명합니다.
+> 본 문서는 **PRISM — AI 기반 인터랙티브 교과서**의 설계 단계 이론을 실제 프로덕션 수준의 TypeScript/React 코드로 구현한 핵심 아키텍처 구현체와 실무 패턴을 명세합니다.
 
 ---
 
-## ⚙️ 1. 핵심 기술 레이어 아키텍처 (Tech Stack Details)
+## ⚙️ 1. 핵심 기술 패턴 및 코드 레벨 명세
 
-### 🪝 1.1 에이전틱 훅 패턴 (Agentic Custom Hooks)
-리액트 컴포넌트 내부 비대화를 막고, 관심사의 분리(Seperation of Concerns) 트렌드를 따르기 위해 프론트 UI 로직과 인프라/AI I/O 로직을 완벽히 분리했습니다.
+### 🪝 1.1 Agentic Hooks Pattern (View-Logic Separation)
+컴포넌트는 오직 '렌더링과 사용자 입력 감지'에만 집중하고, 모든 비즈니스 로직과 비동기 AI 통신은 커스텀 훅으로 은닉화했습니다.
 
-- **`useStoryMode`**: 
-  - 🔄 **턴 기반 상태 관리**: `turnCount`, 현재 제시된 AI `options`, 생성 중 로딩 상태 `isGenerating` 등 서사 로직의 헤드쿼터.
-  - 📡 **AI 비동기 오케스트레이션**: Gemini API Text/Image 멀티 채널 요청을 브릿징하고, 응답된 String을 안전한 JSON 형식으로 Parse & Validate 하는 예외처리.
-- **`useProgress`**: 
-  - 🔥 **서버리스 실시간 동기화**: Firestore Snapshot 방식(`onSnapshot`) 연동. 백그라운드나 인접 탭, 다른 디바이스에서의 데이터 갱신도 클라이언트 세션에 실시간 브라우저 DOM 렌더 브로드캐스팅.
-- **`useAuth`**: 
-  - 🔑 **세션 옵저버**: Firebase Auth Firebase Token 라이프사이클 이벤트 청취. 상태에 따라 Protected Route(전역 라우팅 블록) 리다이렉트 제어. 전역 `AppContext` 프로바이더에 최신화.
+```typescript
+// src/hooks/useStoryMode.ts
+export function useStoryMode(moduleId: string | undefined) {
+  const [storyText, setStoryText] = useState('');
+  const [consequence, setConsequence] = useState<any>('');
+  const [choices, setChoices] = useState<any[]>([]);
+  const [generating, setGenerating] = useState(false);
 
-### 🧠 1.2 지능형 메타 프롬프트 엔지니어링 (Multi-Persona Prompting)
-순수한 문자열 정보 반환을 막고, 학습자의 **'초인지(Metacognition) 발달 단계'**와 **'관심사 컨텍스트'**에 최적화된 메타 프롬프트를 시스템 내부적으로 하드코딩(템플릿 엔진화)하여 주입합니다.
+  const handleChoice = async (choiceText: string) => {
+    setGenerating(true);
+    try {
+      const prompt = PromptFactory.createStoryTurnPrompt({
+        userProfile: profile,
+        moduleInfo,
+        targetCountry,
+        history,
+        choiceText
+      });
+      const response = await generateStoryContent(prompt);
+      const data = JSON.parse(response || '{}');
+      
+      setStoryText(data.narrative);
+      setConsequence(data.consequence);
+      setChoices(data.choices || []);
+      
+      // Firestore 진도 및 발자취(storyLogs) 자동 갱신
+      await saveStoryProgress(choiceText, data);
+    } finally {
+      setGenerating(false);
+    }
+  };
 
-#### 💡 수준별(Level) 프롬프트 분기 주입 가이드
-| 📊 계층 (Level) | 🎯 초점 분기(Core Focus) 규칙 | 🗣 권장 문장 / 어조 특성 (Tone) |
-| :---: | :--- | :--- |
-| **Elementary** | 감수성 폭발 및 단순 직관 | 짧은 3-4문장, 쉬운 기본 단어 위주 편성, 따뜻하고 격려하는('~해요', '~했나요?') 동화적 어조. |
-| **Middle** | 논리 추론 기초 육성 | 5-6문장, 일상어+교과 핵심 용어 혼합 사용, 선택에 따른 명백한 논리적인 인과결과 방어묘사. |
-| **High** | 비판적 사고 기반 확충 | 8-10문장의 긴 호흡, 고급 어휘 및 다각적 인과관계(기회비용 등) 분석 시점 제공. ('~합니다', '~하십시오') |
+  return { storyText, consequence, choices, generating, handleChoice };
+}
+```
 
 ---
 
-## 🖼 2. 렌더링 성능 최적화 (Rendering Performance)
+### 🏭 1.2 프롬프트 팩토리 패턴 (PromptFactory)
+`src/lib/factories/PromptFactory.ts`를 통해 산발적인 문자열 조작을 제거하고, 학습자의 **학교급(Elementary/Middle/High)**과 **읽기 수준(Basic/Standard/Advanced)**에 따른 엄격한 메타 규칙을 시스템 프롬프트로 강제합니다.
 
-멀티모달 AI(이미지 생성) 특성상 필수 불가결하게 마주하는 서버 레이턴시 응답을 클라이언트 UI에서 심리적으로 감소시키기 위한 패턴입니다.
+```typescript
+// src/lib/factories/PromptFactory.ts
+export class PromptFactory {
+  static getLevelGuidance(level: string, readingLevel?: string): string {
+    const isBasic = readingLevel === 'basic';
+    const isAdvanced = readingLevel === 'advanced';
 
-1. **Skeleton + Shimmer**: `lucide-react` 로더와 `Shimmer` 효과 래퍼를 이용해 이미지가 생성되는 8~10초 동안 스페이스(공간) 레이아웃 시프트를 미연에 방어.
-2. **Text Streaming Transition**: 텍스트 응답이 생성 중일 때 타이핑 효과 애니메이션(`TypingAnimation`)을 이용하여 AI 서버 딜레이 타임을 윈도우 인지 시간으로 착각(Illusion)하도록 유도합니다.
+    if (level === 'elementary') {
+      return `
+        - 대상: 초등학생 (${isBasic ? '어휘 기초' : isAdvanced ? '심화 어휘' : '표준'})
+        - 문장 구성: 짧고 명확한 3~4문장, 쉬운 일상어 위주
+        - 어조: 친절하고 격려하는 어조 ('~해요', '~했답니다')
+      `;
+    } else if (level === 'middle') {
+      return `
+        - 대상: 중학생 (원리와 인과관계 탐구)
+        - 문장 구성: 논리적인 5~6문장, 교과 필수 용어 자연스럽게 포함
+        - 어조: 호기심을 자극하고 합리적 사고를 유도하는 어조
+      `;
+    } else {
+      return `
+        - 대상: 고등학생 (사회 구조 및 비판적 딜레마)
+        - 문장 구성: 7~9문장, 구조적 분석과 다각적 파급 효과 제시
+        - 어조: 신뢰감 있고 진지한 학술적 문체
+      `;
+    }
+  }
+}
+```
 
 ---
 
-## 🗓 3. 실무 개발 마일스톤 로그 (Development Sprint Diary)
+### 🎨 1.3 가변 테마 엔진 (Adaptive Theme System)
+학습자의 프로필 변경 즉시 UI 전체의 색상, 곡률, 폰트가 동적으로 리페인팅됩니다.
 
-총 8개의 스프린트를 통해 점진적인 아키텍처 개선(Refactoring)과 글로벌 패치가 수행되었습니다. 상세 내역은 `docs/dev_log` 를 참조하십시오.
+```typescript
+// src/lib/theme.ts
+export function getLightTheme(level: string) {
+  if (level === 'elementary') {
+    return {
+      card: 'bg-white border-amber-200/80 shadow-amber-100/50',
+      radius: 'rounded-3xl',
+      font: 'font-sans',
+      accent: 'text-amber-600',
+      badge: 'bg-amber-100 text-amber-800'
+    };
+  } else if (level === 'high') {
+    return {
+      card: 'bg-white border-stone-200 shadow-stone-100/40',
+      radius: 'rounded-lg',
+      font: 'font-serif',
+      accent: 'text-stone-700',
+      badge: 'bg-stone-100 text-stone-800'
+    };
+  }
+  // 기본 중학교 (Middle) 테마
+  return {
+    card: 'bg-white border-blue-200 shadow-blue-100/50',
+    radius: 'rounded-2xl',
+    font: 'font-sans',
+    accent: 'text-blue-600',
+    badge: 'bg-blue-100 text-blue-800'
+  };
+}
+```
 
-### 🛠 [Phase 1~2] 코어 프로토타이핑 및 데이터베이스 결합
-- **프로필 영속성(Persistence) 완성**: `ProfileSetup.tsx` 훅 단에서 `getDoc`을 통해 진입 즉시 기존 유저 정보를 실시간 로딩(Pre-fill). 
-- **DB Write-Safety 확보**: `setDoc(Ref, Data, { merge: true })` 옵션 구문을 직접 감싸는 래퍼 훅을 띄워, 기존 하위 데이터(`progress>storyLogs`)의 유실 없이 메타 정보 타겟팅 패치 수행.
+---
 
-### 🌐 [Phase 3] 시스템 확장 및 글로벌화 (2026.04.14 ~ 04.15)
-단일 데모 과목 체계를 '전 교과 및 8개국 글로벌 스탠다드'로 확장하는 동적(Dynamic) JSON 라우팅 기반 코드 스플리팅 구조 적용.
-- [🔗 상세 로그: 2026-04-14 학습의 일반화 확장기](./dev_log/2026-04-14_GENERALIZATION.md)
-- [🔗 상세 로그: 2026-04-15 8개국 로컬라이징 및 다국어 스크립트](./dev_log/2026-04-15_LOCALIZATION.md)
+### 📈 1.4 실시간 랭크 산출 알고리즘 (Rank Engine)
+학습자의 활동 성과를 3대 지표로 가중 합산(100점 만점)하여 실시간 등급을 계산합니다.
 
-### 💎 [Phase 4] 리팩토링 및 프리미엄 UX 개편 (2026.04.17)
-상태 관리 안티패턴(Prop Drilling) 제거를 위한 Context 전환 및 랜딩 UI 리마스터링 작업.
-- **Login UI Redesign**: 2단 분기 그리드 채택. 우측 정보 영역에는 `Particles` 애니메이션과 `Lucide` 아이콘 피처 리스트를 띄워 몰입감 부여.
-- [🔗 상세 로그: 2026-04-17 컴포넌트 아키텍처 완전 혁신](./dev_log/2026-04-17_ARCHITECTURE.md)
+$$\text{Total Score} = (\text{어휘 완료 여부} \times 20) + \min(\text{스토리 턴 수} \times 5, 40) + (\text{퀴즈 최고 점수} \times 0.4)$$
 
-### 🚀 [Phase 5] 글로벌 교육과정 마스터 로드맵 (2026.04.20)
-최종 288개 콤비네이션 모듈 매핑(과목-단원 관계) 통합 패치 적용 및 QA 완결.
-- [🔗 상세 로그: 2026-04-20 글로벌 방대 인프라 확장 마무리 (Prism Expansion)](./dev_log/2026-04-20_PRISM_EXPANSION.md)
+| 점수 구간 | 획득 티어 | 칭호 호칭 | 배지 시각화 |
+| :---: | :---: | :---: | :---: |
+| 90점 이상 | **Diamond** | 지식의 현자 (Grand Sage) | 💎 다이아몬드 광채 효과 |
+| 75점 ~ 89점 | **Platinum** | 법과 진리의 수호자 | 🌟 플래티넘 엠블럼 |
+| 50점 ~ 74점 | **Gold** | 열정적 탐구자 | 🥇 골드 메달 |
+| 25점 ~ 49점 | **Silver** | 성실한 모험가 | 🥈 실버 엠블럼 |
+| 25점 미만 | **Bronze** | 첫 발을 뗀 견습생 | 🥉 브론즈 배지 |
+
+---
+
+## 🗓 2. 실무 개발 마일스톤 로그 (Development Diary)
+
+총 8개의 체계적인 스프린트를 통해 단계별 점진적 아키텍처 개선과 리팩토링이 완성되었습니다.
+
+* **Phase 1 (2026-04-10)**: [04-10 MVP 탄생](./dev_log/2026-04-10_MVP.md) — Firebase Auth/Firestore 기초 연동 및 Gemini 3.1 & 2.5 프로토타입.
+* **Phase 2 (2026-04-12 ~ 04-13)**: [04-12 분기점과 인과관계](./dev_log/2026-04-12_BRANCHING.md) 및 [04-13 게이미피케이션](./dev_log/2026-04-13_GAMIFICATION.md) — 스토리 분기, Consequence 배너, 티어 시스템 구현.
+* **Phase 3 (2026-04-14 ~ 04-15)**: [04-14 학습의 일반화](./dev_log/2026-04-14_GENERALIZATION.md) 및 [04-15 글로벌 진출](./dev_log/2026-04-15_LOCALIZATION.md) — 3개 교과 확장, 글로벌 8개국 다국어 번역 프록시 연동.
+* **Phase 4 (2026-04-16 ~ 04-17)**: [04-16 상호작용 심화](./dev_log/2026-04-16_INTERACTION.md) 및 [04-17 아키텍처 혁신](./dev_log/2026-04-17_ARCHITECTURE.md) — 미니게임 매칭, AppContext 전면 도입, Magic UI 리마스터.
+* **Phase 5 (2026-04-20)**: [04-20 288개 글로벌 모듈 지식 베이스 확장](./dev_log/2026-04-20_PRISM_EXPANSION.md) — 8개국 표준 교육과정 통합 및 테마 엔진 고도화.
 
 ---
 
 <div align="right">
-  <b><a href="./05_DATABASE_SCHEMA_ERD.md">← 이전: 05. DB 스키마 & ERD</a> &nbsp;|&nbsp; <a href="./07_TEST_VERIFICATION.md">다음: 07. 검증 및 테스트 →</a></b>
+  <b><a href="./05_DATABASE_SCHEMA_ERD.md">← 이전: 05. DB 스키마 & ERD</a> &nbsp;|&nbsp; <a href="./07_TEST_VERIFICATION.md">다음: 07. 검증 및 품질 관리 (Next) →</a></b>
 </div>
