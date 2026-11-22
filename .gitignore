@@ -8,3 +8,5 @@ coverage/
 !.env.example
 
 .vite/
+
+firebase-applet-config.json
